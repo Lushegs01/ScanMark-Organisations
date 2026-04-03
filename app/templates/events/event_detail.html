@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+{% block title %}{{ event.name }}{% endblock %}
+
+{% block content %}
+<div x-data="eventLive('{{ event.id }}', {{ event.checked_in_count() }}, {{ event.registered_count() }}, {{ event.max_capacity or 'null' }})" x-init="initSSE()">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px;">
+        <div>
+            <a href="{{ url_for('events.events_list') }}" style="display:inline-flex;align-items:center;gap:6px;color:#737373;font-size:13px;text-decoration:none;margin-bottom:12px;" onmouseover="this.style.color='#e5e5e5'" onmouseout="this.style.color='#737373'">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                Events
+            </a>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <h1 style="font-family:'Syne',sans-serif;font-size:24px;font-weight:700;color:#fff;">{{ event.name }}</h1>
+                <span class="pill pill-{{ status }}">
+                    {% if status == 'active' %}<div class="live-dot" style="width:5px;height:5px;"></div>{% endif %}
+                    {{ status|capitalize }}
+                </span>
+            </div>
+            <p style="color:#737373;font-size:14px;margin-top:4px;">
+                {{ event.date.strftime('%A, %d %B %Y') }} &nbsp;·&nbsp; {{ event.start_time.strftime('%H:%M') }}
+                {% if event.venue %} &nbsp;·&nbsp; {{ event.venue }}{% endif %}
+                {% if event.max_capacity %} &nbsp;·&nbsp; Capacity: {{ event.max_capacity }}{% endif %}
+            </p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <a href="{{ url_for('events.event_display', event_id=event.id) }}" class="btn-secondary" target="_blank">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                Display
+            </a>
+            <a href="{{ url_for('events.export_csv', event_id=event.id) }}" class="btn-secondary">CSV</a>
+            <a href="{{ url_for('events.export_pdf', event_id=event.id) }}"
+               {% if current_user.organisation.plan == 'free' %}onclick="event.preventDefault();showUpgradeModal('PDF Report','Export a post-event PDF report. Available on Pro plan.','Available on Pro plan')"{% endif %}
+               class="btn-secondary">PDF</a>
+        </div>
+    </div>
+
+    <!-- Live stats row -->
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:16px;margin-bottom:24px;">
+        <!-- Counter card -->
+        <div class="stat-card" style="display:flex;align-items:center;gap:20px;">
+            <div>
+                <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:#737373;margin-bottom:8px;">
+                    {% if status == 'active' %}
+                    <span style="display:inline-flex;align-items:center;gap:5px;"><div class="live-dot"></div> Live Check-ins</span>
+                    {% else %}Total Check-ins{% endif %}
+                </div>
+                <div style="display:flex;align-items:baseline;gap:8px;">
+                    <div class="stat-number" x-text="checkinCount">{{ event.checked_in_count() }}</div>
+                    <div style="font-family:'Syne',sans-serif;font-size:22px;color:#737373;">/ <span x-text="totalCount">{{ event.registered_count() }}</span></div>
+                </div>
+                <div style="font-size:13px;color:#737373;margin-top:4px;">registered attendees</div>
+            </div>
+            <!-- Capacity bar -->
+            {% if event.max_capacity %}
+            <div style="flex:1;min-width:120px;">
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                    <span style="font-size:11px;color:#737373;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">Capacity</span>
+                    <span style="font-size:12px;color:#a3a3a3;" x-text="`${Math.min(Math.round(checkinCount / {{ event.max_capacity }} * 100), 100)}%`">{{ capacity_pct }}%</span>
+                </div>
+                <div class="progress-bar" style="height:8px;">
+                    <div class="progress-fill" :class="{'amber': capacityPct >= 80 && capacityPct < 95, 'red': capacityPct >= 95}"
+                         :style="`width: ${Math.min(capacityPct, 100)}%`" style="width:{{ capacity_pct }}%;transition:width 500ms ease;"></div>
+                </div>
+                <div style="font-size:11px;color:#737373;margin-top:4px;">{{ event.max_capacity }} max</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="stat-card" style="text-align:center;">
+            <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:#737373;margin-bottom:8px;">Pre-Registered</div>
+            <div class="stat-number">{{ attendees|rejectattr('is_walkin')|list|length }}</div>
+        </div>
+        <div class="stat-card" style="text-align:center;">
+            <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:#737373;margin-bottom:8px;">Walk-ins</div>
+            <div class="stat-number">{{ attendees|selectattr('is_walkin')|list|length }}</div>
+        </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start;">
+        <div>
+            <!-- Recent check-ins live feed -->
+            <div class="card" style="padding:0;overflow:hidden;margin-bottom:20px;">
+                <div style="padding:16px 20px;border-bottom:1px solid #2a2a2a;display:flex;align-items:center;justify-content:space-between;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-size:14px;font-weight:600;color:#fff;">Live Feed</span>
+                        {% if status == 'active' %}
+                        <div style="display:flex;align-items:center;gap:5px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);border-radius:999px;padding:2px 8px;">
+                            <div class="live-dot"></div>
+                            <span style="font-size:11px;color:#22c55e;font-weight:600;">Live</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <button x-on:click="$refs.manualModal.style.display='flex'" class="btn-secondary" style="padding:6px 12px;font-size:13px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Manual
+                    </button>
+                </div>
+                <div id="live-feed" style="max-height:280px;overflow-y:auto;">
+                    {% if checkins %}
+                    {% for c in checkins %}
+                    <div style="padding:12px 20px;border-bottom:1px solid #1e1e1e;display:flex;align-items:center;justify-content:space-between;">
+                        <div style="font-size:14px;font-weight:500;color:#fff;">{{ c.name }}</div>
+                        <div style="font-size:12px;color:#737373;">{{ c.checkin_time.strftime('%H:%M') }}</div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="empty-state" style="padding:40px 20px;" id="empty-feed">
+                        <div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+                        <h3 style="font-size:15px;font-weight:700;color:#fff;margin-bottom:4px;">No check-ins yet</h3>
+                        <p style="font-size:13px;color:#737373;">Share the QR code or display screen to start.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Full attendee list -->
+            <div class="card" style="padding:0;overflow:hidden;">
+                <div style="padding:16px 20px;border-bottom:1px solid #2a2a2a;display:flex;align-items:center;gap:12px;">
+                    <span style="font-size:14px;font-weight:600;color:#fff;">Attendees</span>
+                    <span style="font-size:13px;color:#737373;">{{ attendees|length }} registered</span>
+                    <div style="position:relative;margin-left:auto;">
+                        <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#737373;" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <input type="text" placeholder="Search attendees…" oninput="filterAttendees(this.value)" class="form-input" style="padding-left:30px;padding-top:7px;padding-bottom:7px;font-size:13px;width:220px;">
+                    </div>
+                </div>
+                {% if attendees %}
+                <div style="overflow-x:auto;">
+                    <table class="data-table" id="attendees-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Ticket Ref</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for a in attendees %}
+                            <tr>
+                                <td style="font-weight:500;color:#fff;">{{ a.name }}</td>
+                                <td style="color:#a3a3a3;font-size:13px;">{{ a.email or '—' }}</td>
+                                <td style="color:#a3a3a3;font-size:13px;">{{ a.ticket_ref or '—' }}</td>
+                                <td>{% if a.is_walkin %}<span class="pill pill-upcoming">Walk-in</span>{% else %}<span class="pill pill-blue">Registered</span>{% endif %}</td>
+                                <td>{% if a.is_checked_in() %}<span class="pill pill-ontime">✓ Checked in</span>{% else %}<span style="font-size:13px;color:#737373;">Not arrived</span>{% endif %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+                    <h3 style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:#fff;margin-bottom:6px;">No attendees yet</h3>
+                    <p style="color:#737373;font-size:13px;max-width:260px;margin-bottom:16px;">Import a CSV guest list or add walk-in attendees manually.</p>
+                    <button x-on:click="$refs.importModal.style.display='flex'" class="btn-primary" style="font-size:13px;">Import CSV</button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div style="display:flex;flex-direction:column;gap:14px;">
+            <!-- QR -->
+            <div class="card" style="text-align:center;">
+                <div style="font-size:13px;font-weight:600;color:#a3a3a3;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:14px;">Check-in QR</div>
+                <div style="border:2px solid #3b82f6;border-radius:12px;padding:10px;display:inline-block;box-shadow:0 0 24px rgba(59,130,246,0.2);margin-bottom:10px;">
+                    <img src="data:image/png;base64,{{ qr_b64 }}" alt="Check-in QR" style="width:160px;height:160px;display:block;border-radius:4px;">
+                </div>
+                <div style="font-size:11px;color:#737373;margin-bottom:10px;">Walk-in check-in</div>
+                <a href="{{ url_for('checkin.event_walkin', event_id=event.id) }}" target="_blank" class="btn-ghost" style="width:100%;justify-content:center;font-size:12px;">Test link</a>
+            </div>
+
+            <!-- Import CSV -->
+            <div class="card">
+                <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:4px;">Import Guest List</div>
+                <div style="font-size:12px;color:#737373;margin-bottom:12px;">CSV with columns: name, email, ticket_ref</div>
+                <button @click="$refs.importModal.style.display='flex'" class="btn-secondary" style="width:100%;justify-content:center;font-size:13px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Upload CSV
+                </button>
+            </div>
+
+            <!-- Danger -->
+            <div class="card">
+                <div style="font-size:12px;font-weight:600;color:#737373;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px;">Danger Zone</div>
+                <form method="POST" action="{{ url_for('events.delete_event', event_id=event.id) }}" onsubmit="return confirm('Delete this event and all check-in data? This cannot be undone.')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-danger" style="width:100%;justify-content:center;font-size:13px;">Delete Event</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual check-in modal -->
+    <div x-ref="manualModal" style="display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;" @click.self="$refs.manualModal.style.display='none'">
+        <div class="card scale-in" style="width:100%;max-width:400px;background:#1e1e1e;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+                <span style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:#fff;">Manual Check-in</span>
+                <button @click="$refs.manualModal.style.display='none'" class="btn-ghost" style="padding:4px;">✕</button>
+            </div>
+            <form method="POST" action="{{ url_for('events.manual_checkin', event_id=event.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div style="display:flex;flex-direction:column;gap:14px;">
+                    <div>
+                        <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">Full Name <span style="color:#ef4444">*</span></label>
+                        <input type="text" name="name" class="form-input" placeholder="Attendee name" required>
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">Email</label>
+                        <input type="email" name="email" class="form-input" placeholder="optional@email.com">
+                    </div>
+                    <div style="display:flex;gap:10px;">
+                        <button type="submit" class="btn-primary" style="flex:1;justify-content:center;">Check In</button>
+                        <button type="button" @click="$refs.manualModal.style.display='none'" class="btn-secondary">Cancel</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Import modal -->
+    <div x-ref="importModal" style="display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;" @click.self="$refs.importModal.style.display='none'">
+        <div class="card scale-in" style="width:100%;max-width:440px;background:#1e1e1e;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+                <span style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:#fff;">Import Guest List</span>
+                <button @click="$refs.importModal.style.display='none'" class="btn-ghost" style="padding:4px;">✕</button>
+            </div>
+            <div style="background:#0f0f0f;border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:#737373;line-height:1.7;">
+                CSV format: <strong style="color:#a3a3a3;">name</strong> (required), <strong style="color:#a3a3a3;">email</strong>, <strong style="color:#a3a3a3;">ticket_ref</strong><br>
+                First row must be the column header row.
+            </div>
+            <form method="POST" action="{{ url_for('events.import_attendees', event_id=event.id) }}" enctype="multipart/form-data" x-data="{file:null}" @submit="$refs.importModal.style.display='none'">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div style="margin-bottom:16px;">
+                    <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">Select CSV file</label>
+                    <input type="file" name="attendee_csv" accept=".csv" class="form-input" required @change="file = $event.target.files[0]" style="font-size:13px;padding:8px 12px;">
+                    <div x-show="file" style="font-size:12px;color:#22c55e;margin-top:5px;" x-text="file ? file.name : ''"></div>
+                </div>
+                <div style="display:flex;gap:10px;">
+                    <button type="submit" class="btn-primary" style="flex:1;justify-content:center;" :disabled="!file">Import Attendees</button>
+                    <button type="button" @click="$refs.importModal.style.display='none'" class="btn-secondary">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function eventLive(eventId, initialCount, initialTotal, capacity) {
+    return {
+        checkinCount: initialCount,
+        totalCount: initialTotal,
+        capacityPct: capacity ? Math.round(initialCount / capacity * 100) : 0,
+        initSSE() {
+            {% if status == 'active' %}
+            const es = new EventSource(`/events/${eventId}/stream`);
+            es.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                if (data.type === 'checkin' || data.type === 'init') {
+                    this.checkinCount = data.count;
+                    this.totalCount = data.total;
+                    if (capacity) this.capacityPct = Math.min(Math.round(data.count / capacity * 100), 100);
+                    if (data.type === 'checkin') this.addToFeed(data);
+                }
+            };
+            {% endif %}
+        },
+        addToFeed(data) {
+            const feed = document.getElementById('live-feed');
+            const empty = document.getElementById('empty-feed');
+            if (empty) empty.remove();
+            const row = document.createElement('div');
+            row.style.cssText = 'padding:12px 20px;border-bottom:1px solid #1e1e1e;display:flex;align-items:center;justify-content:space-between;animation:fadeIn 300ms ease;';
+            row.innerHTML = `<div style="font-size:14px;font-weight:500;color:#fff;">${data.name}</div><div style="font-size:12px;color:#737373;">${data.time}</div>`;
+            feed.insertBefore(row, feed.firstChild);
+        }
+    };
+}
+
+function filterAttendees(q) {
+    const rows = document.querySelectorAll('#attendees-table tbody tr');
+    const term = q.toLowerCase();
+    rows.forEach(r => r.style.display = r.textContent.toLowerCase().includes(term) ? '' : 'none');
+}
+</script>
+{% endblock %}

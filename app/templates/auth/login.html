@@ -1,0 +1,51 @@
+{% extends 'auth/auth_base.html' %}
+{% block title %}Sign In{% endblock %}
+
+{% block auth_content %}
+<h1 style="font-family:'Syne',sans-serif;font-size:28px;font-weight:700;color:#fff;margin-bottom:6px;">Welcome back</h1>
+<p style="color:var(--muted);font-size:15px;margin-bottom:36px;">Sign in to your ScanMark account.</p>
+
+<form method="POST" action="{{ url_for('auth.login') }}" novalidate x-data="{ loading: false }" @submit="loading = true">
+    {{ form.hidden_tag() }}
+
+    <div style="display:flex;flex-direction:column;gap:18px;">
+        <div>
+            <label style="display:block;font-size:13px;font-weight:600;color:var(--subtle);margin-bottom:6px;">Email Address <span style="color:var(--error)">*</span></label>
+            {{ form.email(class='form-input' + (' error' if form.email.errors else ''), placeholder='you@company.com', autocomplete='email') }}
+            {% if form.email.errors %}
+            <p style="color:#ef4444;font-size:12px;margin-top:5px;">{{ form.email.errors[0] }}</p>
+            {% endif %}
+        </div>
+
+        <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <label style="font-size:13px;font-weight:600;color:var(--subtle);">Password <span style="color:var(--error)">*</span></label>
+                <a href="{{ url_for('auth.forgot_password') }}" style="font-size:12px;color:var(--accent);text-decoration:none;">Forgot password?</a>
+            </div>
+            {{ form.password(class='form-input' + (' error' if form.password.errors else ''), placeholder='••••••••', autocomplete='current-password') }}
+            {% if form.password.errors %}
+            <p style="color:#ef4444;font-size:12px;margin-top:5px;">{{ form.password.errors[0] }}</p>
+            {% endif %}
+        </div>
+
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            {{ form.remember(style='width:16px;height:16px;accent-color:#3b82f6;cursor:pointer;') }}
+            <span style="font-size:14px;color:var(--subtle);">Keep me signed in</span>
+        </label>
+
+        <button type="submit" class="btn-primary" style="width:100%;padding:12px;font-size:15px;justify-content:center;" :disabled="loading">
+            <span x-show="!loading">Sign in</span>
+            <span x-show="loading" style="display:flex;align-items:center;gap:8px;">
+                <svg style="animation:spin 1s linear infinite;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                Signing in...
+            </span>
+        </button>
+    </div>
+</form>
+
+<p style="text-align:center;margin-top:28px;font-size:14px;color:var(--muted);">
+    Don't have an account? <a href="{{ url_for('auth.register') }}" style="color:var(--accent);text-decoration:none;font-weight:600;">Create one free</a>
+</p>
+
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+{% endblock %}

@@ -1,0 +1,11 @@
+{% extends 'auth/auth_base.html' %}
+{% block title %}Link Expired{% endblock %}
+
+{% block auth_content %}
+<div style="text-align:center;">
+    <div style="font-size:48px;margin-bottom:20px;">⏱</div>
+    <h1 style="font-family:'Syne',sans-serif;font-size:24px;font-weight:700;color:#fff;margin-bottom:8px;">Reset link expired</h1>
+    <p style="color:#737373;font-size:15px;line-height:1.7;margin-bottom:32px;">This password reset link has expired or already been used. Reset links are valid for 2 hours.</p>
+    <a href="{{ url_for('auth.forgot_password') }}" class="btn-primary" style="display:inline-flex;">Request a new link</a>
+</div>
+{% endblock %}

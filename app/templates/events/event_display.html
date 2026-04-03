@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ event.name }} — ScanMark</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #000;
+            color: #fff;
+            font-family: 'DM Sans', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-font-smoothing: antialiased;
+        }
+        .layout {
+            display: flex;
+            align-items: center;
+            gap: clamp(40px, 6vw, 100px);
+            padding: 40px;
+        }
+        /* Left: QR */
+        .qr-side { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+        .qr-wrap {
+            border: 2px solid #3b82f6;
+            border-radius: 20px;
+            padding: 18px;
+            box-shadow: 0 0 60px rgba(59,130,246,0.4), 0 0 120px rgba(59,130,246,0.15);
+            animation: pulse-glow 3s ease-in-out infinite;
+        }
+        .qr-wrap img {
+            display: block;
+            width: clamp(180px, 26vmin, 300px);
+            height: clamp(180px, 26vmin, 300px);
+            border-radius: 6px;
+        }
+        @keyframes pulse-glow {
+            0%,100% { box-shadow: 0 0 60px rgba(59,130,246,0.4), 0 0 120px rgba(59,130,246,0.12); }
+            50% { box-shadow: 0 0 80px rgba(59,130,246,0.6), 0 0 160px rgba(59,130,246,0.22); }
+        }
+        .scan-hint { font-size: clamp(13px, 1.4vw, 16px); color: rgba(255,255,255,0.4); text-align: center; }
+
+        /* Right: Info */
+        .info-side { display: flex; flex-direction: column; gap: 24px; max-width: 500px; }
+        .event-name {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(28px, 4.5vw, 60px);
+            font-weight: 800;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+        }
+        .event-meta { color: rgba(255,255,255,0.4); font-size: clamp(13px, 1.5vw, 18px); }
+
+        .counter-section { display: flex; align-items: center; gap: 20px; }
+        .counter-num {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(60px, 10vw, 120px);
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -0.03em;
+            transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1), color 200ms;
+        }
+        .counter-num.bump { transform: scale(1.1); color: #3b82f6; }
+        .counter-sep { font-family: 'Syne', sans-serif; font-size: clamp(32px, 5vw, 60px); color: rgba(255,255,255,0.2); }
+        .counter-total { font-family: 'Syne', sans-serif; font-size: clamp(32px, 5vw, 60px); font-weight: 700; color: rgba(255,255,255,0.35); }
+        .counter-label { font-size: clamp(13px, 1.5vw, 17px); color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.12em; margin-top: 6px; }
+
+        /* Capacity bar */
+        .cap-bar-wrap { width: 100%; }
+        .cap-bar-label { display: flex; justify-content: space-between; font-size: 13px; color: rgba(255,255,255,0.35); margin-bottom: 8px; }
+        .cap-bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; }
+        .cap-fill { height: 100%; background: #3b82f6; border-radius: 4px; transition: width 600ms ease, background 300ms; }
+        .cap-fill.amber { background: #f59e0b; }
+        .cap-fill.red { background: #ef4444; }
+
+        /* Last checkin ticker */
+        #last-name {
+            font-size: clamp(14px, 1.6vw, 19px);
+            color: #3b82f6;
+            min-height: 26px;
+            transition: opacity 300ms;
+        }
+        #last-name.fade { opacity: 0; }
+
+        #flash { position:fixed;inset:0;background:rgba(59,130,246,0.05);pointer-events:none;opacity:0;transition:opacity 100ms; }
+        #flash.on { opacity:1; }
+
+        .wordmark { position:fixed;bottom:24px;right:28px;opacity:0.25;display:flex;align-items:center;gap:7px; }
+        .wm-icon { width:20px;height:20px;background:#3b82f6;border-radius:5px;display:flex;align-items:center;justify-content:center; }
+        .wm-text { font-family:'Syne',sans-serif;font-size:13px;font-weight:700; }
+    </style>
+</head>
+<body>
+<div id="flash"></div>
+<div class="layout">
+    <div class="qr-side">
+        <div class="qr-wrap">
+            <img src="data:image/png;base64,{{ qr_b64 }}" alt="Check in QR code">
+        </div>
+        <div class="scan-hint">Scan to check in ↑</div>
+    </div>
+
+    <div class="info-side">
+        <div>
+            <div class="event-name">{{ event.name }}</div>
+            <div class="event-meta" style="margin-top:8px;">
+                {{ event.date.strftime('%A, %d %B %Y') }} &nbsp;·&nbsp; {{ event.start_time.strftime('%H:%M') }}
+                {% if event.venue %} &nbsp;·&nbsp; {{ event.venue }}{% endif %}
+            </div>
+        </div>
+
+        <div>
+            <div class="counter-section">
+                <div>
+                    <div class="counter-num" id="counter">{{ checkin_count }}</div>
+                    <div class="counter-label">checked in</div>
+                </div>
+                {% if total > 0 %}
+                <div style="display:flex;align-items:baseline;gap:6px;margin-top:-20px;">
+                    <span class="counter-sep">/</span>
+                    <span class="counter-total" id="total">{{ total }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if event.max_capacity %}
+        <div class="cap-bar-wrap">
+            <div class="cap-bar-label">
+                <span>Capacity</span>
+                <span id="cap-pct">{{ event.capacity_percent() }}%</span>
+            </div>
+            <div class="cap-bar">
+                <div class="cap-fill" id="cap-fill" style="width:{{ event.capacity_percent() }}%;"></div>
+            </div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.25);margin-top:5px;">{{ event.max_capacity }} maximum</div>
+        </div>
+        {% endif %}
+
+        <div id="last-name">&nbsp;</div>
+    </div>
+</div>
+
+<div class="wordmark">
+    <div class="wm-icon"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg></div>
+    <span class="wm-text">ScanMark</span>
+</div>
+
+<script>
+const counter = document.getElementById('counter');
+const lastName = document.getElementById('last-name');
+const capFill = document.getElementById('cap-fill');
+const capPct = document.getElementById('cap-pct');
+const flash = document.getElementById('flash');
+const maxCap = {{ event.max_capacity or 'null' }};
+
+function bump(count, name, total) {
+    counter.textContent = count;
+    counter.classList.add('bump');
+    setTimeout(() => counter.classList.remove('bump'), 400);
+
+    flash.classList.add('on');
+    setTimeout(() => flash.classList.remove('on'), 280);
+
+    if (total) document.getElementById('total').textContent = total;
+
+    if (maxCap && capFill) {
+        const pct = Math.min(Math.round(count / maxCap * 100), 100);
+        capFill.style.width = pct + '%';
+        capFill.className = 'cap-fill' + (pct >= 95 ? ' red' : pct >= 80 ? ' amber' : '');
+        if (capPct) capPct.textContent = pct + '%';
+    }
+
+    if (name) {
+        lastName.classList.remove('fade');
+        lastName.textContent = `${name} just arrived`;
+        clearTimeout(lastName._t);
+        lastName._t = setTimeout(() => lastName.classList.add('fade'), 4500);
+    }
+}
+
+const es = new EventSource('/events/{{ event.id }}/stream');
+es.onmessage = (e) => {
+    const d = JSON.parse(e.data);
+    if (d.type === 'checkin') bump(d.count, d.name, d.total);
+    else if (d.type === 'init') { counter.textContent = d.count; }
+};
+</script>
+</body>
+</html>

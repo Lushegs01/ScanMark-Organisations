@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Already Checked In — {{ event.name }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{min-height:100vh;background:#0f0f0f;color:#e5e5e5;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;padding:24px 20px;-webkit-font-smoothing:antialiased}
+        .card{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:16px;padding:36px 28px;width:100%;max-width:400px;text-align:center}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div style="font-size:52px;margin-bottom:20px;">✅</div>
+        <h1 style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#fff;margin-bottom:8px;">Already Checked In</h1>
+        <p style="color:#737373;font-size:14px;margin-bottom:24px;">{{ attendee.name }}, your attendance for <strong style="color:#e5e5e5;">{{ event.name }}</strong> has already been recorded.</p>
+        <div style="background:#0f0f0f;border-radius:10px;padding:14px;font-size:13px;color:#737373;">
+            Checked in at {{ attendee.checkin.checkin_time.strftime('%H:%M on %d %b %Y') }}
+        </div>
+    </div>
+    <p style="color:#525252;font-size:12px;margin-top:20px;">Powered by <strong style="color:#3b82f6;">ScanMark</strong></p>
+</body>
+</html>

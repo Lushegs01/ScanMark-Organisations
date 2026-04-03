@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ session.name }} — ScanMark</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body {
+            background: #000;
+            color: #fff;
+            font-family: 'DM Sans', sans-serif;
+            height: 100%;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 40px;
+            padding: 40px;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Ambient glow */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(ellipse, rgba(59,130,246,0.08) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .session-name {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(28px, 4vw, 56px);
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            text-align: center;
+            color: #fff;
+        }
+        .session-meta {
+            font-size: clamp(14px, 1.5vw, 18px);
+            color: rgba(255,255,255,0.45);
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        .qr-wrap {
+            position: relative;
+            padding: 20px;
+            border-radius: 20px;
+            border: 2px solid #3b82f6;
+            box-shadow: 0 0 60px rgba(59,130,246,0.35), 0 0 120px rgba(59,130,246,0.15);
+            animation: qr-pulse 3s ease-in-out infinite;
+        }
+        .qr-wrap img {
+            display: block;
+            width: clamp(200px, 28vmin, 340px);
+            height: clamp(200px, 28vmin, 340px);
+            border-radius: 8px;
+        }
+        @keyframes qr-pulse {
+            0%, 100% { box-shadow: 0 0 60px rgba(59,130,246,0.35), 0 0 120px rgba(59,130,246,0.12); }
+            50% { box-shadow: 0 0 80px rgba(59,130,246,0.5), 0 0 160px rgba(59,130,246,0.2); }
+        }
+
+        .scan-label {
+            font-size: clamp(13px, 1.4vw, 17px);
+            color: rgba(255,255,255,0.5);
+            text-align: center;
+            letter-spacing: 0.04em;
+        }
+
+        .counter-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+        .counter-number {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(56px, 10vw, 120px);
+            font-weight: 800;
+            line-height: 1;
+            color: #fff;
+            transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+            letter-spacing: -0.03em;
+        }
+        .counter-number.bump {
+            transform: scale(1.12);
+            color: #3b82f6;
+        }
+        .counter-label {
+            font-size: clamp(13px, 1.5vw, 18px);
+            color: rgba(255,255,255,0.4);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            font-weight: 500;
+        }
+
+        /* Live ping animation around counter */
+        .counter-ring {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .counter-ring::before {
+            content: '';
+            position: absolute;
+            width: 160%;
+            height: 160%;
+            border-radius: 50%;
+            border: 1px solid rgba(59,130,246,0.15);
+            animation: ring-expand 3s ease-out infinite;
+        }
+        @keyframes ring-expand {
+            0% { transform: scale(0.7); opacity: 0.5; }
+            100% { transform: scale(1.2); opacity: 0; }
+        }
+
+        /* Checkin flash overlay */
+        #flash-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(59,130,246,0.06);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 100ms;
+        }
+        #flash-overlay.flash { opacity: 1; }
+
+        /* Recent name ticker */
+        #last-checkin {
+            font-size: clamp(14px, 1.6vw, 20px);
+            color: #3b82f6;
+            font-weight: 500;
+            min-height: 28px;
+            text-align: center;
+            transition: opacity 300ms;
+        }
+        #last-checkin.fade-out { opacity: 0; }
+
+        /* ScanMark wordmark */
+        .wordmark {
+            position: fixed;
+            bottom: 28px;
+            right: 32px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            opacity: 0.3;
+        }
+        .wordmark-icon {
+            width: 22px; height: 22px;
+            background: #3b82f6;
+            border-radius: 5px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .wordmark span {
+            font-family: 'Syne', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div id="flash-overlay"></div>
+
+    <!-- Session name -->
+    <div style="text-align:center;">
+        <div class="session-name">{{ session.name }}</div>
+        <div class="session-meta">
+            {{ session.date.strftime('%A, %d %B %Y') }}
+            &nbsp;·&nbsp;
+            {{ session.start_time.strftime('%H:%M') }}
+            {% if session.session_type == 'training' and session.facilitator %}
+            &nbsp;·&nbsp; {{ session.facilitator }}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- QR code -->
+    <div class="qr-wrap">
+        <img src="data:image/png;base64,{{ qr_b64 }}" alt="Scan to check in">
+    </div>
+
+    <div class="scan-label">Scan to check in &nbsp;↑</div>
+
+    <!-- Live counter -->
+    <div class="counter-wrap">
+        <div class="counter-ring">
+            <div class="counter-number" id="counter">{{ checkin_count }}</div>
+        </div>
+        <div class="counter-label">checked in</div>
+        <div id="last-checkin">&nbsp;</div>
+    </div>
+
+    <!-- Wordmark -->
+    <div class="wordmark">
+        <div class="wordmark-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+        </div>
+        <span>ScanMark</span>
+    </div>
+
+    <script>
+    const counter = document.getElementById('counter');
+    const lastCheckin = document.getElementById('last-checkin');
+    const flashOverlay = document.getElementById('flash-overlay');
+
+    function bumpCounter(newCount, name) {
+        counter.textContent = newCount;
+        counter.classList.add('bump');
+        setTimeout(() => counter.classList.remove('bump'), 350);
+
+        flashOverlay.classList.add('flash');
+        setTimeout(() => flashOverlay.classList.remove('flash'), 300);
+
+        if (name) {
+            lastCheckin.classList.remove('fade-out');
+            lastCheckin.textContent = `${name} just checked in`;
+            clearTimeout(lastCheckin._timeout);
+            lastCheckin._timeout = setTimeout(() => {
+                lastCheckin.classList.add('fade-out');
+            }, 4000);
+        }
+    }
+
+    const es = new EventSource('/corporate/sessions/{{ session.id }}/stream');
+    es.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        if (data.type === 'checkin') {
+            bumpCounter(data.count, data.name);
+        } else if (data.type === 'count') {
+            counter.textContent = data.count;
+        }
+    };
+    es.onerror = function() {
+        // Reconnect is automatic — show subtle indicator
+        setTimeout(() => {}, 3000);
+    };
+    </script>
+</body>
+</html>

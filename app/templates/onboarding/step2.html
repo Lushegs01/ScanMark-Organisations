@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block title %}Almost Ready{% endblock %}
+
+{% block full_page %}
+<div style="min-height:100vh;background:#0f0f0f;display:flex;align-items:center;justify-content:center;padding:32px 20px;">
+    <div style="width:100%;max-width:520px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:48px;justify-content:center;">
+            <div style="width:32px;height:32px;background:#3b82f6;border-radius:8px;display:flex;align-items:center;justify-content:center;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+            </div>
+            <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:20px;color:#fff;">ScanMark</span>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:36px;">
+            <div style="flex:1;height:3px;background:#3b82f6;border-radius:2px;"></div>
+            <div style="flex:1;height:3px;background:#3b82f6;border-radius:2px;"></div>
+            <div style="font-size:12px;color:#737373;white-space:nowrap;margin-left:8px;">Step 2 of 2</div>
+        </div>
+
+        <div class="fade-in">
+            {% if current_user.account_type == 'corporate' %}
+            <h1 style="font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:#fff;margin-bottom:6px;">How will you use ScanMark?</h1>
+            <p style="color:#737373;font-size:15px;margin-bottom:32px;">Select your primary use case. You can always use both.</p>
+
+            <form method="POST" action="{{ url_for('onboarding.step2') }}" novalidate>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div style="display:flex;flex-direction:column;gap:20px;" x-data="{ useCase: 'both' }">
+                    <div style="display:flex;flex-direction:column;gap:10px;">
+                        {% set cases = [
+                            ('shifts', '🕐', 'Shift Attendance', 'Track who showed up for each shift and flag absences.'),
+                            ('training', '📋', 'Training Compliance', 'Track mandatory training completion and generate compliance reports.'),
+                            ('both', '⚡', 'Both', 'Use ScanMark for shift tracking and training compliance.')
+                        ] %}
+                        {% for val, icon, label, desc in cases %}
+                        <label style="cursor:pointer;">
+                            <input type="radio" name="use_case" value="{{ val }}" x-model="useCase" style="display:none;">
+                            <div :style="useCase === '{{ val }}' ? 'border-color:#3b82f6;background:rgba(59,130,246,0.06);' : ''" style="border:1px solid #2a2a2a;border-radius:10px;padding:16px;display:flex;align-items:center;gap:14px;transition:all 150ms;">
+                                <div style="font-size:22px;width:36px;text-align:center;flex-shrink:0;">{{ icon }}</div>
+                                <div>
+                                    <div style="font-size:14px;font-weight:600;color:#fff;margin-bottom:2px;">{{ label }}</div>
+                                    <div style="font-size:13px;color:#737373;">{{ desc }}</div>
+                                </div>
+                                <div :style="useCase === '{{ val }}' ? 'background:#3b82f6;border-color:#3b82f6;' : ''" style="margin-left:auto;width:18px;height:18px;border:2px solid #333;border-radius:50%;flex-shrink:0;transition:all 150ms;display:flex;align-items:center;justify-content:center;">
+                                    <div x-show="useCase === '{{ val }}'" style="width:7px;height:7px;background:white;border-radius:50%;"></div>
+                                </div>
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+
+                    <div style="border-top:1px solid #1e1e1e;padding-top:20px;">
+                        <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">Invite a team member <span style="color:#737373;font-weight:400;">(optional)</span></label>
+                        <input type="email" name="invite_email" class="form-input" placeholder="colleague@company.com">
+                        <p style="font-size:12px;color:#737373;margin-top:5px;">They'll receive an invitation email to join your organisation.</p>
+                    </div>
+
+                    <button type="submit" class="btn-primary" style="width:100%;padding:13px;font-size:15px;justify-content:center;">
+                        Go to dashboard
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                    </button>
+                </div>
+            </form>
+
+            {% else %}
+            <h1 style="font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:#fff;margin-bottom:6px;">You're almost set up</h1>
+            <p style="color:#737373;font-size:15px;margin-bottom:32px;">Create your first event now, or explore the dashboard first.</p>
+
+            <form method="POST" action="{{ url_for('onboarding.step2') }}" novalidate>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                    <!-- Preview card -->
+                    <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:24px;text-align:center;margin-bottom:8px;">
+                        <div style="font-size:40px;margin-bottom:12px;">🎪</div>
+                        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:20px;color:#fff;margin-bottom:4px;">{{ org.name }}</div>
+                        <div style="font-size:13px;color:#737373;">{{ org.event_type or 'Events organisation' }}</div>
+                        <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:12px;">
+                            <div style="width:6px;height:6px;background:#22c55e;border-radius:50%;"></div>
+                            <span style="font-size:12px;color:#22c55e;font-weight:600;">Account ready</span>
+                        </div>
+                    </div>
+
+                    <a href="{{ url_for('events.new_event') }}" class="btn-primary" style="width:100%;padding:13px;font-size:15px;justify-content:center;text-align:center;">
+                        Create my first event
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </a>
+                    <button type="submit" class="btn-secondary" style="width:100%;padding:12px;font-size:15px;justify-content:center;">
+                        Explore dashboard first
+                    </button>
+                </div>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

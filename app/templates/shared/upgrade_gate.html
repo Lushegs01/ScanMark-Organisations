@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}Upgrade Required{% endblock %}
+
+{% block content %}
+<div style="max-width:480px;margin:64px auto;text-align:center;" class="fade-in">
+    <div style="width:64px;height:64px;background:rgba(59,130,246,0.1);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    </div>
+    <h1 style="font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:#fff;margin-bottom:8px;">{{ title }}</h1>
+    <p style="color:#737373;font-size:15px;line-height:1.7;margin-bottom:8px;">{{ message }}</p>
+    <p style="color:#3b82f6;font-size:14px;font-weight:600;margin-bottom:32px;">Available on {{ plan }} plan</p>
+    <div style="display:flex;gap:12px;justify-content:center;">
+        <a href="{{ url_for('billing.pricing') }}" class="btn-primary" style="padding:12px 28px;font-size:15px;">View Plans</a>
+        <a href="javascript:history.back()" class="btn-secondary">Go back</a>
+    </div>
+</div>
+{% endblock %}

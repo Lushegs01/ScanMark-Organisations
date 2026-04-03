@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Checked In — {{ session.name }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            min-height: 100vh;
+            background: #0f0f0f;
+            color: #e5e5e5;
+            font-family: 'DM Sans', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 20px;
+            -webkit-font-smoothing: antialiased;
+        }
+        .card {
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 16px;
+            padding: 36px 28px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        /* Animated checkmark */
+        .check-circle {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: rgba(34,197,94,0.1);
+            border: 2px solid #22c55e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            animation: pop-in 400ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        .check-circle svg {
+            animation: draw-check 500ms ease 200ms forwards;
+            stroke-dasharray: 30;
+            stroke-dashoffset: 30;
+        }
+        @keyframes pop-in {
+            from { transform: scale(0.5); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        @keyframes draw-check {
+            to { stroke-dashoffset: 0; }
+        }
+
+        h1 {
+            font-family: 'Syne', sans-serif;
+            font-size: 24px;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 6px;
+            animation: fade-up 400ms ease 150ms both;
+        }
+        .subtitle {
+            color: #737373;
+            font-size: 14px;
+            margin-bottom: 28px;
+            animation: fade-up 400ms ease 200ms both;
+        }
+        .details {
+            background: #0f0f0f;
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+            animation: fade-up 400ms ease 250ms both;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+        }
+        .detail-label { color: #737373; }
+        .detail-value { color: #e5e5e5; font-weight: 500; }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 600;
+            animation: fade-up 400ms ease 300ms both;
+        }
+        .on-time { background: rgba(34,197,94,0.12); color: #22c55e; border: 1px solid rgba(34,197,94,0.25); }
+        .late { background: rgba(239,68,68,0.12); color: #ef4444; border: 1px solid rgba(239,68,68,0.25); }
+
+        @keyframes fade-up {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="check-circle">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+            </svg>
+        </div>
+
+        <h1>You're checked in!</h1>
+        <p class="subtitle">Your attendance has been recorded.</p>
+
+        <div class="details">
+            <div class="detail-row">
+                <span class="detail-label">Session</span>
+                <span class="detail-value">{{ session.name }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Name</span>
+                <span class="detail-value">{{ checkin.name }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Time</span>
+                <span class="detail-value">{{ checkin.checkin_time.strftime('%H:%M:%S') }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Date</span>
+                <span class="detail-value">{{ session.date.strftime('%d %B %Y') }}</span>
+            </div>
+        </div>
+
+        <span class="status-badge {% if is_late %}late{% else %}on-time{% endif %}">
+            {% if is_late %}
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Checked in late
+            {% else %}
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            On time
+            {% endif %}
+        </span>
+    </div>
+
+    <p style="color:#525252;font-size:12px;margin-top:20px;">Powered by <strong style="color:#3b82f6;">ScanMark</strong></p>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', -apple-system, sans-serif; font-size: 13px; color: #1a1a1a; background: white; padding: 40px; }
+  .header { border-bottom: 2px solid #3b82f6; padding-bottom: 20px; margin-bottom: 28px; display: flex; justify-content: space-between; align-items: flex-end; }
+  .logo { font-size: 20px; font-weight: 700; color: #1a1a1a; letter-spacing: -0.02em; }
+  .logo span { color: #3b82f6; }
+  .report-title { font-size: 22px; font-weight: 700; color: #111; margin-bottom: 4px; }
+  .meta-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 28px; }
+  .meta-item label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #999; display: block; margin-bottom: 4px; }
+  .meta-item value { font-size: 15px; font-weight: 600; color: #111; }
+  .stat-row { display: flex; gap: 16px; margin-bottom: 28px; }
+  .stat-box { flex: 1; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; text-align: center; }
+  .stat-num { font-size: 28px; font-weight: 700; color: #111; }
+  .stat-lbl { font-size: 11px; color: #999; margin-top: 3px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #555; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid #e5e7eb; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 28px; }
+  th { text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #999; padding: 8px 10px; border-bottom: 2px solid #e5e7eb; }
+  td { padding: 9px 10px; border-bottom: 1px solid #f0f0f0; font-size: 13px; color: #333; }
+  .on-time { color: #16a34a; font-weight: 600; }
+  .late { color: #dc2626; font-weight: 600; }
+  .missing-section { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
+  .missing-title { font-size: 13px; font-weight: 700; color: #dc2626; margin-bottom: 10px; }
+  .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #aaa; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="logo">Scan<span>Mark</span></div>
+      <div style="font-size:11px;color:#999;margin-top:2px;">Attendance Report</div>
+    </div>
+    <div style="text-align:right;font-size:11px;color:#999;">
+      Generated {{ generated_at.strftime('%d %B %Y at %H:%M') }}
+    </div>
+  </div>
+
+  <div class="report-title">{{ session.name }}</div>
+  <div style="font-size:13px;color:#666;margin-bottom:24px;margin-top:4px;">
+    {% if session.session_type == 'training' %}Training Session{% else %}Shift{% endif %}
+    {% if session.is_mandatory %} &nbsp;·&nbsp; <strong style="color:#dc2626;">Mandatory</strong>{% endif %}
+  </div>
+
+  <div class="meta-grid">
+    <div class="meta-item"><label>Date</label><value>{{ session.date.strftime('%d %B %Y') }}</value></div>
+    <div class="meta-item"><label>Start Time</label><value>{{ session.start_time.strftime('%H:%M') }}</value></div>
+    <div class="meta-item">
+      <label>{% if session.session_type == 'shift' %}Department{% else %}Facilitator{% endif %}</label>
+      <value>{{ session.department or session.facilitator or '—' }}</value>
+    </div>
+    <div class="meta-item"><label>Late Threshold</label><value>{{ session.late_threshold_minutes }} min</value></div>
+  </div>
+
+  <div class="stat-row">
+    <div class="stat-box">
+      <div class="stat-num">{{ checkins|length }}</div>
+      <div class="stat-lbl">Checked In</div>
+    </div>
+    {% if not session.open_attendance %}
+    <div class="stat-box">
+      <div class="stat-num">{{ expected|length }}</div>
+      <div class="stat-lbl">Expected</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num" style="color:{% if missing %}#dc2626{% else %}#16a34a{% endif %};">{{ missing|length }}</div>
+      <div class="stat-lbl">Missing</div>
+    </div>
+    {% endif %}
+    <div class="stat-box">
+      <div class="stat-num">{{ checkins|selectattr('is_late','equalto',False)|list|length }}</div>
+      <div class="stat-lbl">On Time</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num" style="color:{% if checkins|selectattr('is_late')|list %}#dc2626{% else %}#111{% endif %};">{{ checkins|selectattr('is_late')|list|length }}</div>
+      <div class="stat-lbl">Late</div>
+    </div>
+  </div>
+
+  {% if missing %}
+  <div class="missing-section">
+    <div class="missing-title">⚠ {{ missing|length }} Missing Attendee{% if missing|length != 1 %}s{% endif %} (Mandatory Session)</div>
+    {% for m in missing %}
+    <div style="font-size:13px;color:#333;padding:4px 0;">{{ loop.index }}. {{ m.name }}{% if m.employee_id %} &nbsp; <span style="color:#999;">({{ m.employee_id }})</span>{% endif %}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="section-title">Check-in Record</div>
+  {% if checkins %}
+  <table>
+    <thead><tr><th>#</th><th>Name</th><th>Employee ID</th><th>Check-in Time</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for c in checkins %}
+      <tr>
+        <td style="color:#aaa;">{{ loop.index }}</td>
+        <td>{{ c.name }}{% if c.is_manual %} <span style="font-size:10px;color:#aaa;">(manual)</span>{% endif %}</td>
+        <td>{{ c.employee_id or '—' }}</td>
+        <td>{{ c.checkin_time.strftime('%H:%M:%S') }}</td>
+        <td class="{% if c.is_late %}late{% else %}on-time{% endif %}">{% if c.is_late %}Late{% else %}On Time{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:#999;font-size:13px;padding:16px 0;">No check-ins recorded for this session.</p>
+  {% endif %}
+
+  <div class="footer">
+    <span>ScanMark Organisations &nbsp;·&nbsp; scanmark.app</span>
+    <span>{{ session.name }} &nbsp;·&nbsp; {{ session.date.strftime('%d %b %Y') }}</span>
+  </div>
+</body>
+</html>

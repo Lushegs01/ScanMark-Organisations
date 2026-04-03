@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+{% block title %}{{ session.name }}{% endblock %}
+
+{% block content %}
+<div x-data="sessionLive('{{ session.id }}', {{ checkins|length }})" x-init="initSSE()">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px;">
+        <div>
+            <a href="{{ url_for('corporate.sessions') }}" style="display:inline-flex;align-items:center;gap:6px;color:#737373;font-size:13px;text-decoration:none;margin-bottom:12px;" onmouseover="this.style.color='#e5e5e5'" onmouseout="this.style.color='#737373'">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                Sessions
+            </a>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                <h1 style="font-family:'Syne',sans-serif;font-size:24px;font-weight:700;color:#fff;">{{ session.name }}</h1>
+                <span class="pill pill-{{ status }}">
+                    {% if status == 'active' %}<div class="live-dot" style="width:5px;height:5px;"></div>{% endif %}
+                    {{ status|capitalize }}
+                </span>
+                <span class="pill {% if session.session_type == 'shift' %}pill-blue{% else %}pill-ontime{% endif %}">{{ session.session_type|capitalize }}</span>
+            </div>
+            <p style="color:#737373;font-size:14px;margin-top:4px;">
+                {{ session.date.strftime('%A, %d %B %Y') }} &nbsp;·&nbsp; {{ session.start_time.strftime('%H:%M') }}{% if session.end_time %} – {{ session.end_time.strftime('%H:%M') }}{% endif %}
+                {% if session.department %} &nbsp;·&nbsp; {{ session.department }}{% endif %}
+                {% if session.facilitator %} &nbsp;·&nbsp; {{ session.facilitator }}{% endif %}
+            </p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <a href="{{ url_for('corporate.session_display', session_id=session.id) }}" class="btn-secondary" target="_blank">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                Display Screen
+            </a>
+            <a href="{{ url_for('corporate.export_csv', session_id=session.id) }}" class="btn-secondary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                CSV
+            </a>
+            <a href="{{ url_for('corporate.export_pdf', session_id=session.id) }}"
+               {% if current_user.organisation.plan == 'free' %}
+               onclick="event.preventDefault(); showUpgradeModal('PDF Export', 'Export a beautifully formatted compliance report as a PDF. Upgrade to Pro to unlock.', 'Available on Pro plan')"
+               {% endif %}
+               class="btn-secondary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                PDF
+            </a>
+        </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start;">
+        <!-- Main: checkins list -->
+        <div>
+            <!-- Stats row -->
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;">
+                <div class="card card-sm" style="text-align:center;">
+                    <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:700;color:#fff;" x-text="checkinCount">{{ checkins|length }}</div>
+                    <div style="font-size:12px;color:#737373;margin-top:2px;">Checked in</div>
+                </div>
+                {% if not session.open_attendance %}
+                <div class="card card-sm" style="text-align:center;">
+                    <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:700;color:#fff;">{{ expected|length }}</div>
+                    <div style="font-size:12px;color:#737373;margin-top:2px;">Expected</div>
+                </div>
+                <div class="card card-sm" style="text-align:center;">
+                    <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:700;{% if missing %}color:#ef4444;{% else %}color:#22c55e;{% endif %}">{{ missing|length }}</div>
+                    <div style="font-size:12px;color:#737373;margin-top:2px;">Missing</div>
+                </div>
+                {% else %}
+                <div class="card card-sm" style="text-align:center;">
+                    <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:700;color:#22c55e;" x-text="onTimeCount">{{ checkins|selectattr('is_late','equalto',False)|list|length }}</div>
+                    <div style="font-size:12px;color:#737373;margin-top:2px;">On time</div>
+                </div>
+                <div class="card card-sm" style="text-align:center;">
+                    <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:700;color:#ef4444;" x-text="lateCount">{{ checkins|selectattr('is_late')|list|length }}</div>
+                    <div style="font-size:12px;color:#737373;margin-top:2px;">Late</div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Live check-in list -->
+            <div class="card" style="padding:0;overflow:hidden;">
+                <div style="padding:16px 20px;border-bottom:1px solid #2a2a2a;display:flex;align-items:center;justify-content:space-between;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-size:14px;font-weight:600;color:#fff;">Check-ins</span>
+                        {% if status == 'active' %}
+                        <div style="display:flex;align-items:center;gap:5px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);border-radius:999px;padding:2px 8px;">
+                            <div class="live-dot"></div>
+                            <span style="font-size:11px;color:#22c55e;font-weight:600;">Live</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <!-- Manual check-in -->
+                    <button x-on:click="$refs.manualModal.style.display='flex'" class="btn-secondary" style="padding:6px 12px;font-size:13px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Manual Check-in
+                    </button>
+                </div>
+
+                <div id="checkin-list">
+                    {% if checkins %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Employee ID</th>
+                                <th>Time</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="checkin-tbody">
+                            {% for c in checkins|sort(attribute='checkin_time', reverse=True) %}
+                            <tr>
+                                <td>
+                                    <div style="font-weight:500;color:#fff;">{{ c.name }}</div>
+                                    {% if c.is_manual %}<div style="font-size:11px;color:#737373;">Manual</div>{% endif %}
+                                </td>
+                                <td style="color:#a3a3a3;font-size:13px;">{{ c.employee_id or '—' }}</td>
+                                <td style="color:#a3a3a3;font-size:13px;white-space:nowrap;">{{ c.checkin_time.strftime('%H:%M:%S') }}</td>
+                                <td><span class="pill {% if c.is_late %}pill-late{% else %}pill-ontime{% endif %}">{% if c.is_late %}Late{% else %}On time{% endif %}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="empty-state" id="empty-checkins">
+                        <div class="empty-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                        </div>
+                        <h3 style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:#fff;margin-bottom:4px;">No check-ins yet</h3>
+                        <p style="color:#737373;font-size:13px;">Share the QR code for check-ins to appear here in real time.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Missing attendees (mandatory) -->
+            {% if missing %}
+            <div class="card" style="margin-top:20px;border-color:rgba(239,68,68,0.2);">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <span style="font-size:14px;font-weight:600;color:#ef4444;">{{ missing|length }} Missing Attendee{{ 's' if missing|length != 1 else '' }}</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                    {% for m in missing %}
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#1e1e1e;border-radius:6px;">
+                        <span style="font-size:14px;color:#e5e5e5;">{{ m.name }}</span>
+                        <span style="font-size:12px;color:#737373;">{{ m.employee_id or '' }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar: QR code -->
+        <div>
+            <div class="card" style="text-align:center;">
+                <div style="font-size:13px;font-weight:600;color:#a3a3a3;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:16px;">Check-in QR Code</div>
+                <div style="border:2px solid #3b82f6;border-radius:12px;padding:12px;display:inline-block;box-shadow:0 0 24px rgba(59,130,246,0.2);margin-bottom:12px;">
+                    <img src="data:image/png;base64,{{ qr_b64 }}" alt="Check-in QR" style="width:180px;height:180px;display:block;border-radius:4px;">
+                </div>
+                <div style="font-size:11px;color:#737373;word-break:break-all;margin-bottom:12px;font-family:monospace;">{{ qr_url }}</div>
+                <a href="{{ qr_url }}" target="_blank" class="btn-ghost" style="width:100%;justify-content:center;font-size:12px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    Test check-in link
+                </a>
+            </div>
+
+            {% if session.is_mandatory %}
+            <div class="card" style="margin-top:14px;border-color:rgba(59,130,246,0.2);">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <span style="font-size:13px;font-weight:600;color:#3b82f6;">Mandatory Training</span>
+                </div>
+                <p style="font-size:12px;color:#737373;">Attendance is required. A compliance report will be generated at session close.</p>
+            </div>
+            {% endif %}
+
+            <!-- Danger zone -->
+            <div class="card" style="margin-top:14px;">
+                <div style="font-size:12px;font-weight:600;color:#737373;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px;">Danger Zone</div>
+                <form method="POST" action="{{ url_for('corporate.delete_session', session_id=session.id) }}"
+                      onsubmit="return confirm('Delete this session and all its check-in data? This cannot be undone.')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-danger" style="width:100%;justify-content:center;font-size:13px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                        Delete Session
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual check-in modal -->
+    <div x-ref="manualModal" style="display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;" @click.self="$refs.manualModal.style.display='none'">
+        <div class="card scale-in" style="width:100%;max-width:400px;background:#1e1e1e;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+                <span style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:#fff;">Manual Check-in</span>
+                <button @click="$refs.manualModal.style.display='none'" class="btn-ghost" style="padding:4px;">✕</button>
+            </div>
+            <form method="POST" action="{{ url_for('corporate.manual_checkin', session_id=session.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div style="display:flex;flex-direction:column;gap:14px;">
+                    <div>
+                        <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">Full Name <span style="color:#ef4444">*</span></label>
+                        <input type="text" name="name" class="form-input" placeholder="Employee name" required>
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">Employee ID</label>
+                        <input type="text" name="employee_id" class="form-input" placeholder="Optional">
+                    </div>
+                    <div style="display:flex;gap:10px;">
+                        <button type="submit" class="btn-primary" style="flex:1;justify-content:center;">Check In</button>
+                        <button type="button" @click="$refs.manualModal.style.display='none'" class="btn-secondary">Cancel</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function sessionLive(sessionId, initialCount) {
+    return {
+        checkinCount: initialCount,
+        onTimeCount: {{ checkins|selectattr('is_late','equalto',False)|list|length }},
+        lateCount: {{ checkins|selectattr('is_late')|list|length }},
+        initSSE() {
+            {% if status == 'active' %}
+            const es = new EventSource(`/corporate/sessions/${sessionId}/stream`);
+            es.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                if (data.type === 'checkin') {
+                    this.checkinCount = data.count;
+                    if (data.is_late) this.lateCount++;
+                    else this.onTimeCount++;
+                    this.addRow(data);
+                }
+            };
+            {% endif %}
+        },
+        addRow(data) {
+            const tbody = document.getElementById('checkin-tbody');
+            const empty = document.getElementById('empty-checkins');
+            if (empty) empty.remove();
+
+            if (!tbody) {
+                // Build table if empty state was showing
+                const list = document.getElementById('checkin-list');
+                list.innerHTML = `<table class="data-table"><thead><tr><th>Name</th><th>Employee ID</th><th>Time</th><th>Status</th></tr></thead><tbody id="checkin-tbody"></tbody></table>`;
+            }
+
+            const t = document.getElementById('checkin-tbody');
+            const pill = data.is_late
+                ? '<span class="pill pill-late">Late</span>'
+                : '<span class="pill pill-ontime">On time</span>';
+            const row = document.createElement('tr');
+            row.style.animation = 'fadeIn 300ms ease';
+            row.innerHTML = `<td><div style="font-weight:500;color:#fff;">${data.name}</div>${data.is_manual ? '<div style="font-size:11px;color:#737373;">Manual</div>' : ''}</td><td style="color:#a3a3a3;font-size:13px;">${data.employee_id || '—'}</td><td style="color:#a3a3a3;font-size:13px;white-space:nowrap;">${data.time}</td><td>${pill}</td>`;
+            t.insertBefore(row, t.firstChild);
+        }
+    };
+}
+</script>
+{% endblock %}

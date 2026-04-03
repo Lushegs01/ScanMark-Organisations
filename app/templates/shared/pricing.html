@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% block title %}Pricing{% endblock %}
+
+{% block full_page %}
+<div style="min-height:100vh;background:#0f0f0f;padding:64px 24px;">
+    <div style="max-width:1000px;margin:0 auto;">
+
+        {% if current_user.is_authenticated %}
+        <div style="margin-bottom:32px;">
+            <a href="{{ url_for('shared.dashboard') }}" style="display:inline-flex;align-items:center;gap:6px;color:#737373;font-size:13px;text-decoration:none;" onmouseover="this.style.color='#e5e5e5'" onmouseout="this.style.color='#737373'">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                Back to dashboard
+            </a>
+        </div>
+        {% endif %}
+
+        <div style="text-align:center;margin-bottom:56px;" class="fade-in">
+            <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);border-radius:999px;padding:5px 14px;font-size:12px;color:#3b82f6;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:20px;">Simple Pricing</div>
+            <h1 style="font-family:'Syne',sans-serif;font-size:clamp(36px,5vw,56px);font-weight:800;color:#fff;line-height:1.1;letter-spacing:-0.02em;margin-bottom:16px;">Start free.<br>Scale as you grow.</h1>
+            <p style="color:#737373;font-size:18px;max-width:480px;margin:0 auto;">No per-attendee fees. No surprise charges. Pay a flat monthly rate and track unlimited attendance.</p>
+        </div>
+
+        <!-- Plan cards -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-bottom:60px;" class="stagger">
+
+            <!-- Free -->
+            <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:16px;padding:28px;display:flex;flex-direction:column;">
+                <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:#fff;margin-bottom:8px;">Free</div>
+                <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:8px;">
+                    <span style="font-family:'Syne',sans-serif;font-size:40px;font-weight:800;color:#fff;">$0</span>
+                    <span style="color:#737373;font-size:14px;">/month</span>
+                </div>
+                <div style="font-size:13px;color:#737373;margin-bottom:24px;line-height:1.6;">Perfect for trying out ScanMark or running the occasional small event.</div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:10px;margin-bottom:24px;">
+                    {% for feat in ['3 sessions or events/month', '50 attendees per session', 'CSV export', 'QR code generation', 'Single user'] %}
+                    <div style="display:flex;align-items:center;gap:10px;font-size:14px;color:#a3a3a3;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        {{ feat }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if current_user.is_authenticated and current_user.organisation and current_user.organisation.plan == 'free' %}
+                <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:8px;padding:12px;text-align:center;font-size:13px;color:#737373;font-weight:600;">Current plan</div>
+                {% elif not current_user.is_authenticated %}
+                <a href="{{ url_for('auth.register') }}" class="btn-secondary" style="text-align:center;justify-content:center;">Get started free</a>
+                {% endif %}
+            </div>
+
+            <!-- Pro (highlighted) -->
+            <div style="background:#1a1a1a;border:2px solid #3b82f6;border-radius:16px;padding:28px;display:flex;flex-direction:column;position:relative;box-shadow:0 0 40px rgba(59,130,246,0.12);">
+                <div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:#3b82f6;color:white;font-size:11px;font-weight:700;padding:4px 12px;border-radius:999px;letter-spacing:0.05em;white-space:nowrap;">MOST POPULAR</div>
+                <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:#fff;margin-bottom:8px;">Pro</div>
+                <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:8px;">
+                    <span style="font-family:'Syne',sans-serif;font-size:40px;font-weight:800;color:#fff;">$19</span>
+                    <span style="color:#737373;font-size:14px;">/month</span>
+                </div>
+                <div style="font-size:13px;color:#737373;margin-bottom:24px;line-height:1.6;">For professional organisers and HR teams who need unlimited capacity.</div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:10px;margin-bottom:24px;">
+                    {% for feat in ['Unlimited sessions & events', 'Unlimited attendees', 'CSV & PDF export', 'Email QR code dispatch', 'Single user', 'Priority email support'] %}
+                    <div style="display:flex;align-items:center;gap:10px;font-size:14px;color:#a3a3a3;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        {{ feat }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if current_user.is_authenticated %}
+                    {% if current_user.organisation and current_user.organisation.plan == 'pro' %}
+                    <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:12px;text-align:center;font-size:13px;color:#3b82f6;font-weight:600;">Current plan</div>
+                    {% else %}
+                    <a href="{{ url_for('billing.checkout', plan='pro') }}" class="btn-primary" style="text-align:center;justify-content:center;padding:13px;">Upgrade to Pro</a>
+                    {% endif %}
+                {% else %}
+                <a href="{{ url_for('auth.register') }}" class="btn-primary" style="text-align:center;justify-content:center;padding:13px;">Get started</a>
+                {% endif %}
+            </div>
+
+            <!-- Team -->
+            <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:16px;padding:28px;display:flex;flex-direction:column;">
+                <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:#fff;margin-bottom:8px;">Team</div>
+                <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:8px;">
+                    <span style="font-family:'Syne',sans-serif;font-size:40px;font-weight:800;color:#fff;">$49</span>
+                    <span style="color:#737373;font-size:14px;">/month</span>
+                </div>
+                <div style="font-size:13px;color:#737373;margin-bottom:24px;line-height:1.6;">For larger organisations with multiple organisers managing events together.</div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:10px;margin-bottom:24px;">
+                    {% for feat in ['Everything in Pro', 'Up to 5 team members', 'Advanced analytics', 'Priority support', 'Team activity logs'] %}
+                    <div style="display:flex;align-items:center;gap:10px;font-size:14px;color:#a3a3a3;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        {{ feat }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if current_user.is_authenticated %}
+                    {% if current_user.organisation and current_user.organisation.plan == 'team' %}
+                    <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:8px;padding:12px;text-align:center;font-size:13px;color:#737373;font-weight:600;">Current plan</div>
+                    {% else %}
+                    <a href="{{ url_for('billing.checkout', plan='team') }}" class="btn-secondary" style="text-align:center;justify-content:center;">Upgrade to Team</a>
+                    {% endif %}
+                {% else %}
+                <a href="{{ url_for('auth.register') }}" class="btn-secondary" style="text-align:center;justify-content:center;">Get started</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- FAQ -->
+        <div style="max-width:640px;margin:0 auto;" class="fade-in" x-data="{ open: null }">
+            <h2 style="font-family:'Syne',sans-serif;font-size:24px;font-weight:700;color:#fff;text-align:center;margin-bottom:32px;">Frequently asked questions</h2>
+            {% set faqs = [
+                ('Can I switch plans at any time?', 'Yes. You can upgrade or downgrade at any time. Changes take effect immediately and are prorated.'),
+                ('Is there a per-attendee fee?', 'No. All plans have flat monthly pricing. Import as many attendees as your plan allows without extra charges.'),
+                ('What happens when I hit the free tier limit?', 'You\'ll see a contextual prompt explaining exactly which limit you\'ve reached and which plan unlocks it. Nothing is blocked silently.'),
+                ('Do attendees need to create an account?', 'Never. Attendees just scan the QR code and enter their name. No app download or sign-up required.'),
+                ('Can I cancel my subscription?', 'Yes, anytime through the billing portal or by contacting support. Your data is retained for 90 days after cancellation.')
+            ] %}
+            {% for q, a in faqs %}
+            <div style="border-bottom:1px solid #2a2a2a;padding:16px 0;">
+                <button @click="open = open === {{ loop.index }} ? null : {{ loop.index }}" style="width:100%;background:none;border:none;display:flex;align-items:center;justify-content:space-between;cursor:pointer;text-align:left;gap:12px;">
+                    <span style="font-size:15px;font-weight:600;color:#fff;">{{ q }}</span>
+                    <svg :style="open === {{ loop.index }} ? 'transform:rotate(180deg)' : ''" style="transition:transform 200ms;flex-shrink:0;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#737373" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <div x-show="open === {{ loop.index }}" x-collapse style="padding-top:10px;font-size:14px;color:#737373;line-height:1.7;">{{ a }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% block title %}New Session{% endblock %}
+
+{% block content %}
+<div style="max-width:680px;">
+    <div style="margin-bottom:28px;">
+        <a href="{{ url_for('corporate.sessions') }}" style="display:inline-flex;align-items:center;gap:6px;color:#737373;font-size:13px;text-decoration:none;margin-bottom:16px;transition:color 150ms;" onmouseover="this.style.color='#e5e5e5'" onmouseout="this.style.color='#737373'">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+            Back to sessions
+        </a>
+        <h1 style="font-family:'Syne',sans-serif;font-size:24px;font-weight:700;color:#fff;">Create New Session</h1>
+        <p style="color:#737373;font-size:14px;margin-top:4px;">A QR code will be generated automatically once you save.</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('corporate.new_session') }}" enctype="multipart/form-data" novalidate
+          x-data="{ type: 'shift', openAtt: true, mandatory: false }">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <!-- Session type -->
+        <div class="card" style="margin-bottom:20px;">
+            <div style="font-size:13px;font-weight:600;color:#a3a3a3;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:14px;">Session Type</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <label style="cursor:pointer;">
+                    <input type="radio" name="session_type" value="shift" x-model="type" style="display:none;">
+                    <div :style="type==='shift' ? 'border-color:#3b82f6;background:rgba(59,130,246,0.06);' : ''" style="border:1px solid #2a2a2a;border-radius:10px;padding:16px;transition:all 150ms;">
+                        <div style="font-size:18px;margin-bottom:8px;">🕐</div>
+                        <div style="font-size:14px;font-weight:600;color:#fff;margin-bottom:3px;">Shift</div>
+                        <div style="font-size:12px;color:#737373;">Track shift attendance with start/end times.</div>
+                    </div>
+                </label>
+                <label style="cursor:pointer;">
+                    <input type="radio" name="session_type" value="training" x-model="type" style="display:none;">
+                    <div :style="type==='training' ? 'border-color:#3b82f6;background:rgba(59,130,246,0.06);' : ''" style="border:1px solid #2a2a2a;border-radius:10px;padding:16px;transition:all 150ms;">
+                        <div style="font-size:18px;margin-bottom:8px;">📋</div>
+                        <div style="font-size:14px;font-weight:600;color:#fff;margin-bottom:3px;">Training Session</div>
+                        <div style="font-size:12px;color:#737373;">Track training with compliance reporting.</div>
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <!-- Basic info -->
+        <div class="card" style="margin-bottom:20px;">
+            <div style="font-size:13px;font-weight:600;color:#a3a3a3;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:16px;">Session Details</div>
+            <div style="display:flex;flex-direction:column;gap:16px;">
+
+                <div>
+                    <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">Session Name <span style="color:#ef4444">*</span></label>
+                    <input type="text" name="name" class="form-input" placeholder='e.g. "Morning Shift – Warehouse A"' required>
+                </div>
+
+                <!-- Shift fields -->
+                <div x-show="type === 'shift'">
+                    <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">Department / Team</label>
+                    <input type="text" name="department" class="form-input" placeholder='e.g. "Warehouse Operations"'>
+                </div>
+
+                <!-- Training fields -->
+                <div x-show="type === 'training'">
+                    <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">Facilitator Name</label>
+                    <input type="text" name="facilitator" class="form-input" placeholder='e.g. "Dr. Sarah Chen"'>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                    <div>
+                        <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">Date <span style="color:#ef4444">*</span></label>
+                        <input type="date" name="date" class="form-input" required>
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">Start Time <span style="color:#ef4444">*</span></label>
+                        <input type="time" name="start_time" class="form-input" required>
+                    </div>
+                </div>
+
+                <div x-show="type === 'shift'" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                    <div>
+                        <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">End Time</label>
+                        <input type="time" name="end_time" class="form-input">
+                    </div>
+                </div>
+
+                <div x-show="type === 'training'">
+                    <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">Duration (minutes)</label>
+                    <input type="number" name="duration" class="form-input" value="60" min="1" max="600" style="max-width:160px;">
+                </div>
+
+                <div>
+                    <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">Late Threshold (minutes)</label>
+                    <input type="number" name="late_threshold" class="form-input" value="5" min="0" max="60" style="max-width:160px;">
+                    <p style="font-size:12px;color:#737373;margin-top:4px;">Check-ins after this many minutes past start time are marked late.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attendance settings -->
+        <div class="card" style="margin-bottom:20px;">
+            <div style="font-size:13px;font-weight:600;color:#a3a3a3;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:16px;">Attendance Settings</div>
+            <div style="display:flex;flex-direction:column;gap:16px;">
+
+                <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;" x-show="type === 'training'">
+                    <input type="checkbox" name="is_mandatory" @change="mandatory = $event.target.checked" style="margin-top:3px;width:16px;height:16px;accent-color:#3b82f6;flex-shrink:0;">
+                    <div>
+                        <div style="font-size:14px;font-weight:600;color:#fff;">Mandatory for compliance</div>
+                        <div style="font-size:12px;color:#737373;margin-top:2px;">Attendance is required. Missing attendees will be surfaced in the compliance report.</div>
+                    </div>
+                </label>
+
+                <div style="border:1px solid #2a2a2a;border-radius:8px;overflow:hidden;">
+                    <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:14px;" :style="openAtt ? '' : 'opacity:0.7;'" @click="openAtt = true">
+                        <input type="radio" name="open_attendance" value="on" x-model="openAtt" :checked="openAtt" style="margin-top:3px;accent-color:#3b82f6;flex-shrink:0;">
+                        <div>
+                            <div style="font-size:14px;font-weight:600;color:#fff;">Open attendance</div>
+                            <div style="font-size:12px;color:#737373;margin-top:2px;">Anyone who scans is recorded. No pre-loaded attendee list.</div>
+                        </div>
+                    </label>
+                    <div style="height:1px;background:#1e1e1e;"></div>
+                    <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:14px;" @click="openAtt = false">
+                        <input type="radio" name="open_attendance" value="off" x-model="openAtt" style="margin-top:3px;accent-color:#3b82f6;flex-shrink:0;">
+                        <div style="flex:1;">
+                            <div style="font-size:14px;font-weight:600;color:#fff;">Pre-loaded attendee list</div>
+                            <div style="font-size:12px;color:#737373;margin-top:2px;">Upload a CSV with expected attendees. Missing attendees appear in the compliance report.</div>
+                            <div x-show="!openAtt" style="margin-top:10px;">
+                                <label style="display:block;font-size:12px;font-weight:600;color:#a3a3a3;margin-bottom:5px;">Upload CSV (columns: name, employee_id)</label>
+                                <input type="file" name="attendee_csv" accept=".csv" class="form-input" style="font-size:13px;padding:7px 12px;">
+                            </div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <a href="{{ url_for('corporate.sessions') }}" class="btn-secondary">Cancel</a>
+            <button type="submit" class="btn-primary">
+                Create Session &amp; Generate QR
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

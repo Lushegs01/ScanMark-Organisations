@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<div style="max-width:660px;" x-data="{ tab: 'profile' }">
+    <div style="margin-bottom:28px;">
+        <h1 style="font-family:'Syne',sans-serif;font-size:24px;font-weight:700;color:#fff;margin-bottom:4px;">Settings</h1>
+        <p style="color:#737373;font-size:14px;">Manage your organisation, account, and integrations.</p>
+    </div>
+
+    <!-- Tab nav -->
+    <div style="display:flex;gap:4px;border-bottom:1px solid #2a2a2a;margin-bottom:28px;overflow-x:auto;">
+        {% for t, label in [('profile','Organisation'),('account','Account'),('smtp','Email / SMTP'),('billing','Billing'),('team','Team')] %}
+        <button @click="tab = '{{ t }}'"
+            :style="tab === '{{ t }}' ? 'color:#fff;border-bottom:2px solid #3b82f6;' : 'color:#737373;border-bottom:2px solid transparent;'"
+            style="padding:10px 16px;background:none;border:none;border-top:none;border-left:none;border-right:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;white-space:nowrap;transition:color 150ms;">
+            {{ label }}
+        </button>
+        {% endfor %}
+    </div>
+
+    <!-- Organisation -->
+    <div x-show="tab === 'profile'" class="fade-in">
+        <div class="card">
+            <div style="font-size:15px;font-weight:600;color:#fff;margin-bottom:4px;font-family:'Syne',sans-serif;">Organisation Profile</div>
+            <div style="font-size:13px;color:#737373;margin-bottom:20px;">Update your organisation's name and details.</div>
+            <form method="POST" action="{{ url_for('shared.settings') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="profile">
+                <div style="display:flex;flex-direction:column;gap:16px;">
+                    <div>
+                        <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">Organisation Name</label>
+                        <input type="text" name="org_name" value="{{ org.name }}" class="form-input" required>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                        <div>
+                            <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">Account Type</label>
+                            <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:8px;padding:10px 14px;font-size:14px;color:#737373;text-transform:capitalize;">{{ org.account_type }}</div>
+                        </div>
+                        <div>
+                            <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">Current Plan</label>
+                            <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:8px;padding:10px 14px;font-size:14px;color:{% if org.plan == 'free' %}#737373{% else %}#3b82f6{% endif %};font-weight:600;text-transform:capitalize;">{{ org.plan }}</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;justify-content:flex-end;">
+                        <button type="submit" class="btn-primary">Save Changes</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Account -->
+    <div x-show="tab === 'account'" class="fade-in">
+        <div style="display:flex;flex-direction:column;gap:16px;">
+            <div class="card">
+                <div style="font-size:15px;font-weight:600;color:#fff;margin-bottom:4px;font-family:'Syne',sans-serif;">Email Address</div>
+                <div style="font-size:13px;color:#737373;margin-bottom:20px;">Current: <span style="color:#e5e5e5;">{{ current_user.email }}</span></div>
+                <form method="POST" action="{{ url_for('shared.settings') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="email">
+                    <div style="display:flex;gap:10px;align-items:flex-end;">
+                        <div style="flex:1;">
+                            <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">New Email Address</label>
+                            <input type="email" name="email" class="form-input" placeholder="new@email.com" required>
+                        </div>
+                        <button type="submit" class="btn-primary" style="white-space:nowrap;">Update Email</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card">
+                <div style="font-size:15px;font-weight:600;color:#fff;margin-bottom:4px;font-family:'Syne',sans-serif;">Change Password</div>
+                <div style="font-size:13px;color:#737373;margin-bottom:20px;">Use a strong password of at least 8 characters.</div>
+                <form method="POST" action="{{ url_for('shared.settings') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="password">
+                    <div style="display:flex;flex-direction:column;gap:14px;">
+                        <div>
+                            <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">Current Password</label>
+                            <input type="password" name="current_password" class="form-input" placeholder="••••••••" required>
+                        </div>
+                        <div>
+                            <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">New Password</label>
+                            <input type="password" name="new_password" class="form-input" placeholder="Min. 8 characters" required minlength="8">
+                        </div>
+                        <div style="display:flex;justify-content:flex-end;">
+                            <button type="submit" class="btn-primary">Change Password</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- SMTP -->
+    <div x-show="tab === 'smtp'" class="fade-in">
+        <div class="card">
+            <div style="font-size:15px;font-weight:600;color:#fff;margin-bottom:4px;font-family:'Syne',sans-serif;">Email / SMTP Configuration</div>
+            <div style="font-size:13px;color:#737373;margin-bottom:4px;">Used to dispatch QR codes to event attendees (Pro & Team plans).</div>
+            {% if org.plan == 'free' %}
+            <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:12px;margin-bottom:20px;font-size:13px;color:#a3a3a3;">
+                <strong style="color:#3b82f6;">Pro feature.</strong> Email dispatch is available on Pro and Team plans. <a href="{{ url_for('billing.pricing') }}" style="color:#3b82f6;text-decoration:none;font-weight:600;">Upgrade now →</a>
+            </div>
+            {% else %}
+            <div style="margin-bottom:20px;"></div>
+            {% endif %}
+            <form method="POST" action="{{ url_for('shared.settings') }}" {% if org.plan == 'free' %}style="opacity:0.5;pointer-events:none;"{% endif %}>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="smtp">
+                <div style="display:flex;flex-direction:column;gap:14px;">
+                    <div style="display:grid;grid-template-columns:1fr 120px;gap:12px;">
+                        <div>
+                            <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">SMTP Host</label>
+                            <input type="text" name="smtp_host" value="{{ org.smtp_host or '' }}" class="form-input" placeholder="smtp.gmail.com">
+                        </div>
+                        <div>
+                            <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">Port</label>
+                            <input type="number" name="smtp_port" value="{{ org.smtp_port or 587 }}" class="form-input">
+                        </div>
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">SMTP Username</label>
+                        <input type="text" name="smtp_user" value="{{ org.smtp_user or '' }}" class="form-input" placeholder="your@email.com">
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">SMTP Password</label>
+                        <input type="password" name="smtp_password" class="form-input" placeholder="Leave blank to keep current">
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                        <div>
+                            <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">From Name</label>
+                            <input type="text" name="smtp_from_name" value="{{ org.smtp_from_name or org.name }}" class="form-input">
+                        </div>
+                        <div>
+                            <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">From Email</label>
+                            <input type="email" name="smtp_from_email" value="{{ org.smtp_from_email or '' }}" class="form-input">
+                        </div>
+                    </div>
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                        <input type="checkbox" name="smtp_use_tls" {% if org.smtp_use_tls %}checked{% endif %} style="width:16px;height:16px;accent-color:#3b82f6;">
+                        <span style="font-size:14px;color:#e5e5e5;">Use TLS</span>
+                    </label>
+                    <div style="display:flex;justify-content:flex-end;">
+                        <button type="submit" class="btn-primary">Save SMTP Settings</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Billing -->
+    <div x-show="tab === 'billing'" class="fade-in">
+        <div class="card">
+            <div style="font-size:15px;font-weight:600;color:#fff;margin-bottom:20px;font-family:'Syne',sans-serif;">Subscription &amp; Billing</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px;background:#1e1e1e;border-radius:10px;margin-bottom:16px;">
+                <div>
+                    <div style="font-size:13px;color:#737373;margin-bottom:3px;">Current plan</div>
+                    <div style="font-size:20px;font-weight:700;font-family:'Syne',sans-serif;color:{% if org.plan == 'free' %}#737373{% elif org.plan == 'pro' %}#3b82f6{% else %}#f59e0b{% endif %};text-transform:capitalize;">{{ org.plan }}</div>
+                </div>
+                {% if org.plan == 'free' %}
+                <a href="{{ url_for('billing.pricing') }}" class="btn-primary">Upgrade Plan</a>
+                {% else %}
+                <a href="{{ url_for('billing.portal') }}" class="btn-secondary">Manage Billing</a>
+                {% endif %}
+            </div>
+            {% if org.plan != 'free' %}
+            <div style="font-size:13px;color:#737373;">
+                Your subscription is managed via Stripe. Use the button above to update your payment method, download invoices, or cancel your subscription.
+            </div>
+            {% else %}
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                {% for feature, available in [('Unlimited sessions/events', False), ('Unlimited attendees', False), ('PDF export', False), ('Email QR dispatch', False), ('Team members (Team plan)', False)] %}
+                <div style="display:flex;align-items:center;gap:10px;font-size:14px;color:#737373;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    {{ feature }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Team -->
+    <div x-show="tab === 'team'" class="fade-in">
+        <div class="card">
+            <div style="font-size:15px;font-weight:600;color:#fff;margin-bottom:4px;font-family:'Syne',sans-serif;">Team Members</div>
+            <div style="font-size:13px;color:#737373;margin-bottom:20px;">Invite colleagues to manage sessions and events together.</div>
+            {% if org.plan != 'team' %}
+            <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:10px;padding:20px;text-align:center;">
+                <div style="font-size:18px;margin-bottom:8px;">👥</div>
+                <div style="font-size:14px;font-weight:600;color:#fff;margin-bottom:4px;">Team collaboration requires the Team plan</div>
+                <div style="font-size:13px;color:#737373;margin-bottom:16px;">Add up to 5 team members on the Team plan at $49/month.</div>
+                <a href="{{ url_for('billing.pricing') }}" class="btn-primary" style="font-size:13px;">Upgrade to Team</a>
+            </div>
+            {% else %}
+            {% if team_members %}
+            <table class="data-table" style="margin-bottom:20px;">
+                <thead><tr><th>Email</th><th>Role</th><th>Status</th></tr></thead>
+                <tbody>
+                    {% for m in team_members %}
+                    <tr>
+                        <td style="color:#e5e5e5;">{{ m.email }}</td>
+                        <td><span class="pill pill-blue" style="text-transform:capitalize;">{{ m.role }}</span></td>
+                        <td><span class="pill {% if m.invite_accepted %}pill-ontime{% else %}pill-upcoming{% endif %}">{% if m.invite_accepted %}Active{% else %}Pending{% endif %}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+            <form method="POST" action="{{ url_for('shared.settings') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="invite">
+                <div style="display:flex;gap:10px;">
+                    <input type="email" name="invite_email" class="form-input" placeholder="colleague@company.com" required>
+                    <button type="submit" class="btn-primary" style="white-space:nowrap;">Send Invite</button>
+                </div>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

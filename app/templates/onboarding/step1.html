@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% block title %}Setup Your Account{% endblock %}
+
+{% block full_page %}
+<div style="min-height:100vh;background:#0f0f0f;display:flex;align-items:center;justify-content:center;padding:32px 20px;">
+    <div style="width:100%;max-width:520px;">
+        <!-- Logo -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:48px;justify-content:center;">
+            <div style="width:32px;height:32px;background:#3b82f6;border-radius:8px;display:flex;align-items:center;justify-content:center;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+            </div>
+            <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:20px;color:#fff;">ScanMark</span>
+        </div>
+
+        <!-- Progress -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:36px;">
+            <div style="flex:1;height:3px;background:#3b82f6;border-radius:2px;"></div>
+            <div style="flex:1;height:3px;background:#2a2a2a;border-radius:2px;"></div>
+            <div style="font-size:12px;color:#737373;white-space:nowrap;margin-left:8px;">Step 1 of 2</div>
+        </div>
+
+        <div class="fade-in">
+            <h1 style="font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:#fff;margin-bottom:6px;">Tell us about your organisation</h1>
+            <p style="color:#737373;font-size:15px;margin-bottom:32px;">This helps us personalise your dashboard and first-run experience.</p>
+
+            <form method="POST" action="{{ url_for('onboarding.step1') }}" novalidate>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div style="display:flex;flex-direction:column;gap:20px;">
+
+                    <div>
+                        <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">
+                            {% if current_user.account_type == 'corporate' %}Organisation Name{% else %}Organisation or Brand Name{% endif %}
+                            <span style="color:#ef4444"> *</span>
+                        </label>
+                        <input type="text" name="org_name" class="form-input" placeholder="{% if current_user.account_type == 'corporate' %}Acme Corp{% else %}Horizon Events{% endif %}" required autocomplete="organization">
+                    </div>
+
+                    {% if current_user.account_type == 'corporate' %}
+                    <div>
+                        <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">Industry <span style="color:#ef4444">*</span></label>
+                        <select name="industry" class="form-input">
+                            <option value="" disabled selected>Select your industry</option>
+                            {% for ind in ['Technology', 'Healthcare', 'Finance', 'Logistics', 'Manufacturing', 'Retail', 'Education', 'Other'] %}
+                            <option value="{{ ind }}">{{ ind }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">Team Size <span style="color:#ef4444">*</span></label>
+                        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;" x-data="{ size: '' }">
+                            {% for s in ['1–20', '21–100', '101–500', '500+'] %}
+                            <label style="cursor:pointer;text-align:center;">
+                                <input type="radio" name="team_size" value="{{ s }}" x-model="size" style="display:none;">
+                                <div :style="size === '{{ s }}' ? 'border-color:#3b82f6;background:rgba(59,130,246,0.08);color:#3b82f6;' : 'color:#a3a3a3;'" style="border:1px solid #2a2a2a;border-radius:8px;padding:10px 8px;font-size:13px;font-weight:600;transition:all 150ms;">{{ s }}</div>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    {% else %}
+                    <div>
+                        <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">Event Type <span style="color:#ef4444">*</span></label>
+                        <select name="event_type" class="form-input">
+                            <option value="" disabled selected>Select your primary event type</option>
+                            {% for et in ['Corporate Conferences', 'Workshops and Seminars', 'Community Events', 'Trade Shows', 'Other'] %}
+                            <option value="{{ et }}">{{ et }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:13px;font-weight:600;color:#a3a3a3;margin-bottom:6px;">Typical Attendees Per Event</label>
+                        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;" x-data="{ count: '' }">
+                            {% for c in ['1–50', '51–200', '201–1k', '1k+'] %}
+                            <label style="cursor:pointer;text-align:center;">
+                                <input type="radio" name="typical_attendees" value="{{ c }}" x-model="count" style="display:none;">
+                                <div :style="count === '{{ c }}' ? 'border-color:#3b82f6;background:rgba(59,130,246,0.08);color:#3b82f6;' : 'color:#a3a3a3;'" style="border:1px solid #2a2a2a;border-radius:8px;padding:10px 8px;font-size:13px;font-weight:600;transition:all 150ms;">{{ c }}</div>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <button type="submit" class="btn-primary" style="width:100%;padding:13px;font-size:15px;justify-content:center;margin-top:8px;">
+                        Continue
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

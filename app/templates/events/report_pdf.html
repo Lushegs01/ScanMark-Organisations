@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, 'DM Sans', sans-serif; font-size: 13px; color: #1a1a1a; background: white; padding: 40px; }
+  .header { border-bottom: 2px solid #3b82f6; padding-bottom: 20px; margin-bottom: 28px; display: flex; justify-content: space-between; align-items: flex-end; }
+  .logo { font-size: 20px; font-weight: 700; color: #1a1a1a; }
+  .logo span { color: #3b82f6; }
+  .meta-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 28px; }
+  .meta-item label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #999; display: block; margin-bottom: 4px; }
+  .meta-item value { font-size: 15px; font-weight: 600; color: #111; }
+  .stat-row { display: flex; gap: 16px; margin-bottom: 28px; }
+  .stat-box { flex: 1; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; text-align: center; }
+  .stat-num { font-size: 28px; font-weight: 700; color: #111; }
+  .stat-lbl { font-size: 11px; color: #999; margin-top: 3px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #555; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid #e5e7eb; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 28px; }
+  th { text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #999; padding: 8px 10px; border-bottom: 2px solid #e5e7eb; }
+  td { padding: 9px 10px; border-bottom: 1px solid #f0f0f0; font-size: 13px; color: #333; }
+  .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #aaa; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="logo">Scan<span>Mark</span></div>
+      <div style="font-size:11px;color:#999;margin-top:2px;">Post-Event Report</div>
+    </div>
+    <div style="text-align:right;font-size:11px;color:#999;">Generated {{ generated_at.strftime('%d %B %Y at %H:%M') }}</div>
+  </div>
+
+  <div style="font-size:22px;font-weight:700;color:#111;margin-bottom:4px;">{{ event.name }}</div>
+  <div style="font-size:13px;color:#666;margin-bottom:24px;">{{ event.date.strftime('%A, %d %B %Y') }} &nbsp;·&nbsp; {{ event.start_time.strftime('%H:%M') }}{% if event.venue %} &nbsp;·&nbsp; {{ event.venue }}{% endif %}</div>
+
+  <div class="meta-grid">
+    <div class="meta-item"><label>Registered</label><value>{{ attendees|length }}</value></div>
+    <div class="meta-item"><label>Checked In</label><value>{{ checkins|length }}</value></div>
+    <div class="meta-item"><label>Attendance Rate</label><value>{{ event.attendance_rate() }}%</value></div>
+    <div class="meta-item"><label>Walk-ins</label><value>{{ attendees|selectattr('is_walkin')|list|length }}</value></div>
+  </div>
+
+  <div class="stat-row">
+    <div class="stat-box">
+      <div class="stat-num">{{ checkins|length }}</div>
+      <div class="stat-lbl">Total Check-ins</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num">{{ attendees|rejectattr('is_walkin')|list|length }}</div>
+      <div class="stat-lbl">Pre-registered</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num">{{ attendees|selectattr('is_walkin')|list|length }}</div>
+      <div class="stat-lbl">Walk-ins</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num">{{ (attendees|length) - (checkins|length) }}</div>
+      <div class="stat-lbl">No-shows</div>
+    </div>
+  </div>
+
+  <!-- Check-in timeline intervals -->
+  {% if intervals %}
+  <div class="section-title">Check-in Timeline (15-minute intervals)</div>
+  <div style="margin-bottom:28px;background:#f8f9fa;border-radius:8px;padding:16px;">
+    {% set max_interval = intervals.values()|max %}
+    {% for slot, count in intervals.items() %}
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+      <div style="width:50px;font-size:11px;color:#999;text-align:right;flex-shrink:0;">{{ slot }}</div>
+      <div style="flex:1;background:#e5e7eb;border-radius:3px;height:18px;overflow:hidden;">
+        <div style="width:{{ (count / max_interval * 100)|round }}%;height:100%;background:#3b82f6;border-radius:3px;"></div>
+      </div>
+      <div style="width:24px;font-size:12px;font-weight:600;color:#111;flex-shrink:0;">{{ count }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="section-title">Full Attendee List</div>
+  {% set checkin_map = {} %}
+  {% for c in checkins %}{% if c.attendee_id %}{% set _ = checkin_map.update({c.attendee_id: c}) %}{% endif %}{% endfor %}
+  <table>
+    <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Ticket Ref</th><th>Type</th><th>Status</th><th>Time</th></tr></thead>
+    <tbody>
+      {% for a in attendees %}
+      {% set c = checkin_map.get(a.id) %}
+      <tr>
+        <td style="color:#aaa;">{{ loop.index }}</td>
+        <td>{{ a.name }}</td>
+        <td style="color:#666;">{{ a.email or '—' }}</td>
+        <td style="color:#666;">{{ a.ticket_ref or '—' }}</td>
+        <td>{% if a.is_walkin %}Walk-in{% else %}Registered{% endif %}</td>
+        <td style="{% if c %}color:#16a34a;font-weight:600;{% else %}color:#999;{% endif %}">{% if c %}✓ Checked in{% else %}No-show{% endif %}</td>
+        <td>{% if c %}{{ c.checkin_time.strftime('%H:%M') }}{% else %}—{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="footer">
+    <span>ScanMark Organisations &nbsp;·&nbsp; scanmark.app</span>
+    <span>{{ event.name }} &nbsp;·&nbsp; {{ event.date.strftime('%d %b %Y') }}</span>
+  </div>
+</body>
+</html>
